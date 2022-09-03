@@ -6,6 +6,7 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 public class OpenBudgetApplication {
     public static void main(String[] args) {
+
         try {
             new TelegramBotsApi(DefaultBotSession.class).registerBot(new BotController());
         }catch (TelegramApiException e){
