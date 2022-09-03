@@ -1,1 +1,1 @@
-worker: sh target/bin/openBudget
+worker: sh target/bin/workerBot
