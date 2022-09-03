@@ -1,1 +1,1 @@
-web: java $JAVA_OPTS -cp target/classes:target/ dependency/* openbudget.OpenBudgetApplication
+worker: sh target/bin/openBudget
