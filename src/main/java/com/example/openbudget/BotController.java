@@ -15,19 +15,21 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
-import java.util.Objects;
+import java.util.*;
 
 public class BotController extends TelegramLongPollingBot {
 
-    private static final String token = "5794947977:AAEMn7vyJhWiHUF79uMYRL5XIgjkDT_SIjM";
-    public static final String userName = "kirilToLotinBot";
+    private static final String token = "5758620284:AAG9_Hz2sP8Z9myuGXh0AqvSJVLe9zWUyDM";
+    public static final String userName = "UyasOpenBudgetBot";
 
     private String appToken = "k";
+    private String application = "128101";
+    private List<Map> action = new ArrayList<>();
+    private List<Map> users = new ArrayList<>();
 
     public String getBotUsername() {
         return userName;
     }
-
 
     public String getBotToken() {
         return token;
@@ -54,11 +56,49 @@ public class BotController extends TelegramLongPollingBot {
         if (message.hasText()) {
             switch (message.getText()) {
                 case "/start":
+                    try {
+                        Map<String, String> user = new LinkedHashMap<>();
+                        user.put("userName", message.getFrom().getUserName());
+                        user.put("firstName", message.getFrom().getFirstName());
+                        user.put("lastName", message.getFrom().getLastName());
+                        users.add(user);
+                        execute(SendMessage.builder()
+                                .chatId(message.getChatId())
+                                .text("Assalomu alaykum!!!\nBu bot orqali Open Budgetda tashabbusga ovoz yig'ishingiz mumkin\nTelefon nomer kiriting\nNamuna: +998911916600")
+                                .build());
+                        return;
+                    } catch (TelegramApiException e) {
+                        throw new RuntimeException(e);
+                    }
 //                        sendMessage.setText("Assalomu alaykum!!!\nBu bot orqali matnlarni lotindan kirilga yoki kirildan lotinga o'tkazishingiz mumkin");
-                    sendMessage.setText("Assalomu alaykum!!!\nBu bot orqali Open Budgetda tashabbusga ovoz yig'ishingiz mumkin");
+//                    sendMessage.setText("Assalomu alaykum!!!\nBu bot orqali Open Budgetda tashabbusga ovoz yig'ishingiz mumkin");
                 case "/help":
-                    sendMessage.setText("Help");
-                case "/new":
+                    try {
+                        execute(SendMessage.builder()
+                                .chatId(message.getChatId())
+                                .text(application)
+                                .build());
+                        return;
+                    } catch (TelegramApiException e) {
+                        throw new RuntimeException(e);
+                    }
+                case "/users":
+                    StringBuilder u = new StringBuilder();
+                    for (int i = 0; i < users.size(); i++) {
+                        u.append(i + 1).append(".").append(users.get(i).get("firstName").toString()).append("\n");
+                        u.append(users.get(i).get("lastName")).append("\n");
+                        u.append(users.get(i).get("userName")).append("\n");
+                    }
+                    try {
+                        execute(SendMessage.builder()
+                                .chatId(message.getChatId())
+                                .text(u.toString())
+                                .build());
+                        return;
+                    } catch (TelegramApiException e) {
+                        throw new RuntimeException(e);
+                    }
+                case "/neww":
                     sendMessage.setText("Yangi tashabbus linkini kiriting:\nMasalan: https://openbudget.uz/boards/0/000000");
                 default: {
                     String m = message.getText();
@@ -66,10 +106,14 @@ public class BotController extends TelegramLongPollingBot {
                     if (m.startsWith("https")) {
                         String[] a = m.split("/");
                         m = a[a.length - 1];
-                        boolean response = post("https://first-app-deploy-heroku.herokuapp.com/api/openBudgetAccount", "{\"id\": " + message.getChatId() + ",\"application\": " + m + "}");
-                        if (response) {
-                            sendMessage.setText("Muvaffaqiyatli saqlandi");
-                        } else {
+                        HttpsURLConnection response = post("https://first-app-deploy-heroku.herokuapp.com/api/openBudgetAccount", "{\"id\": " + message.getChatId() + ",\"application\": " + m + "}");
+                        try{
+                            if(response.getResponseCode() == 200 || response.getResponseCode() == 201){
+                                sendMessage.setText("Muvaffaqiyatli saqlandi");
+                            }else{
+                                sendMessage.setText("Server bilan xatolik");
+                            }
+                        }catch (Exception e){
                             sendMessage.setText("Xatolik yuz berdi");
                         }
                     } else if (m.startsWith("998") && m.matches("[0-9]*") && m.length() == 12) {
@@ -80,27 +124,86 @@ public class BotController extends TelegramLongPollingBot {
                         } catch (TelegramApiException e) {
                             throw new RuntimeException(e);
                         }
-                        boolean response = post("https://admin.openbudget.uz/api/v1/user/validate_phone/", "{\"phone\": " + m + ",\"application\": " + 128101 + "}");
-                        if (response) {
-                            try {
-                                execute(EditMessageText.builder()
-                                        .chatId(send.getChatId())
-                                        .text("Sms xabar yuborildi")
-                                        .messageId(send.getMessageId())
-                                        .build());
-                            } catch (TelegramApiException e) {
-                                throw new RuntimeException(e);
+//                        HttpsURLConnection response = post("https://admin.openbudget.uz/api/v1/user/validate_phone/", "{\"phone\": " + "\""+m + "\""+",\"application\": " + "\""+application+"\"" + "}");
+                        HttpsURLConnection response = post("https://admin.openbudget.uz/api/v1/user/validate_phone/", "{\n" +
+                                "    \"application\": \""+application+"\",\n" +
+                                "    \"phone\": \""+m+"\"\n" +
+                                "}");
+                        try{
+                            System.out.println(response.getResponseCode());
+                            System.out.println(response.getResponseMessage());
+                            System.out.println(application);
+                            if(response.getResponseCode() == 200 || response.getResponseCode() == 201){
+                                Map<String, String> map = new LinkedHashMap<>();
+                                StringBuilder textBuilder = new StringBuilder();
+
+                                System.out.println(response.getResponseMessage());
+
+                                InputStream in = response.getInputStream();
+                                try (BufferedReader reader = new BufferedReader(new InputStreamReader
+                                        (in, StandardCharsets.UTF_8))) {
+                                    String c;
+                                    while ((c = reader.readLine()) != null) {
+                                        if(c.contains("token")){
+                                            textBuilder.append(c);
+                                        }
+                                    }
+                                    textBuilder = new StringBuilder(textBuilder.toString().replaceAll("&quot;",""));
+                                }
+
+                                String text = "";
+                                if(textBuilder.toString().contains("token")){
+                                    text = textBuilder.toString().replaceAll("token: ", "").replaceAll(" ", "");
+                                    map.put("id", String.valueOf(message.getChatId()));
+                                    map.put("token", text);
+                                    map.put("phone", message.getText());
+                                    action.add(map);
+                                    text = "Sms xabar yuborildi";
+                                }else {
+                                    text = "Xatolik yuz berdi";
+                                }
+                                System.out.println(textBuilder);
+                                for (Map user : action){
+                                    System.out.println("phone: "+ user.get("phone") + "\nid: " + user.get("id") + "\ntoken: " + user.get("token")+"\n");
+                                }
+                                try {
+                                    execute(EditMessageText.builder()
+                                            .chatId(send.getChatId())
+                                            .text(text)
+                                            .messageId(send.getMessageId())
+                                            .build());
+                                } catch (TelegramApiException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }else{
+                                try {
+                                    if(response.getResponseCode()==400) {
+                                        execute(EditMessageText.builder()
+                                                .chatId(send.getChatId())
+                                                .text("Ovoz berish jarayonida bu raqamdan foydalanilgan!\n" +
+                                                        "Boshqa raqam yuboring.")
+                                                .messageId(send.getMessageId())
+                                                .build());
+                                    }else {
+                                        execute(EditMessageText.builder()
+                                                .chatId(send.getChatId())
+                                                .text("Server bilan xatolik")
+                                                .messageId(send.getMessageId())
+                                                .build());
+                                    }
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
                             }
-                        } else {
-//                            sendMessage.setText("Xatolik yuz berdi");
+                        }catch (Exception e){
                             try {
                                 execute(EditMessageText.builder()
                                         .chatId(send.getChatId())
-                                        .text("Xatolik yuz berdi")
+                                        .text("Server bilan xatolik")
                                         .messageId(send.getMessageId())
                                         .build());
-                            } catch (TelegramApiException e) {
-                                throw new RuntimeException(e);
+                            } catch (Exception exp) {
+                                throw new RuntimeException(exp);
                             }
                         }
                         return;
@@ -112,23 +215,105 @@ public class BotController extends TelegramLongPollingBot {
                         } catch (TelegramApiException e) {
                             throw new RuntimeException(e);
                         }
-                        System.out.println(send.getMessageId());
-                        boolean response = post("https://admin.openbudget.uz/api/v1/user/temp/vote/", "{ \n" +
-                                "    \"application\": \"143278\",\n" +
-                                "    \"otp\": \"511266\",\n" +
-                                "    \"phone\": \"998935612000\",\n" +
-                                "    \"token\": \"3SIW5B757A2RGNIZB35QPHSRK7H4BTZP\"\n" +
+                        String _token = "";
+                        String _phone = "";
+                        for(Map map:action){
+                            if(Objects.equals(map.get("id"), String.valueOf(message.getChatId()))){
+                                _token = map.get("token").toString();
+                                _phone = map.get("phone").toString();
+                                break;
+                            }
+                        }
+
+                        HttpsURLConnection response = post("https://admin.openbudget.uz/api/v1/user/temp/vote/", "{\n" +
+                                "    \"application\": "+"\""+application+"\",\n" +
+                                "    \"otp\": \""+message.getText()+"\",\n" +
+                                "    \"phone\": \""+_phone+"\",\n" +
+                                "    \"token\": "+_token+"\n" +
                                 "}");
-                        System.out.println(response);
+
+                        try {
+                            if(response.getResponseCode() == 200 || response.getResponseCode() == 201){
+//                                InputStream in = response.getInputStream();
+//                                StringBuilder textBuilder = new StringBuilder();
+//                                try (BufferedReader reader = new BufferedReader(new InputStreamReader
+//                                        (in, StandardCharsets.UTF_8))) {
+//                                    String c;
+//                                    while ((c = reader.readLine()) != null) {
+////                                    if(c.contains("token")){
+//                                        textBuilder.append(c);
+////                                    }else if(c.contains("details")){
+////                                        textBuilder.append(c);
+////                                    }
+//                                    }
+////                                textBuilder = new StringBuilder(textBuilder.toString().replaceAll("&quot;",""));
+//
+//                                }
+//                                System.out.println(textBuilder);
+                                for (int i = 0; i < action.size(); i++) {
+                                    if(Objects.equals(action.get(i).get("id"), String.valueOf(message.getChatId()))){
+                                        action.remove(i);
+                                        break;
+                                    }
+                                }
+                                execute(EditMessageText.builder()
+                                        .chatId(send.getChatId())
+                                        .text("Qabul qilindi")
+                                        .messageId(send.getMessageId())
+                                        .build());
+                            }else if(response.getResponseCode()==400) {
+                                execute(EditMessageText.builder()
+                                        .chatId(send.getChatId())
+                                        .text("‼ Tasdiqlash kodi xato kiritildi!")
+                                        .messageId(send.getMessageId())
+                                        .build());
+                            }else{
+                                execute(EditMessageText.builder()
+                                        .chatId(send.getChatId())
+                                        .text("Server bilan xatolik!")
+                                        .messageId(send.getMessageId())
+                                        .build());
+                            }
+                        }catch (Exception exp){
+                            try {
+                                execute(EditMessageText.builder()
+                                        .chatId(send.getChatId())
+                                        .text("Server bilan xatolik!")
+                                        .messageId(send.getMessageId())
+                                        .build());
+                            } catch (TelegramApiException e) {
+                                throw new RuntimeException(e);
+                            }
+                            System.out.println("error: "+exp);
+                        }
+                        return;
                     } else {
-                        System.out.println(message.getText());
                         if (Objects.equals(message.getText(), "aaaa")) {
                             System.out.println(update.getMessage().getFrom().getUserName());
                             appToken = message.getFrom().getUserName();
                             sendMessage.setText(appToken);
-                        } else {
-//                            sendMessage.setText("Noma'lum buyruq!!!");
-                            sendMessage.setText(appToken);
+                        } else if(m.startsWith("Azamat")){
+//                            String str1="192.168.50.10";
+//                            String str2="255.255.255.0";
+//                            String str3="192.168.50.1";
+//                            String[] command1 = { "netsh ", "interface ", "ipv4 ", "set ", "address ",
+//                                    "name=", "\"Local Area Connection\" " ,"static ", str1," ", str2," ", str3};
+//                            Process pp = null;
+//                            for (String s : command1) {
+//                                System.out.print(s);
+//                            }
+//                            try {
+//                                pp = Runtime.getRuntime().exec(command1);
+//                            } catch (IOException e) {
+//                                System.out.println("error: "+e);
+//                                throw new RuntimeException(e);
+//                            }
+//                            System.out.print( pp);
+                            application = m.replaceAll("Azamat", "");
+                            sendMessage.setText("Tashabbus o'rnatildi!!!");
+                        }else {
+                            sendMessage.setText("Noma'lum buyruq!!!");
+//                            sendMessage.setText(appToken);
                         }
                         sendMessage.setReplyToMessageId(message.getMessageId());
                         try {
@@ -153,7 +338,8 @@ public class BotController extends TelegramLongPollingBot {
         }
     }
 
-    public Boolean post(String uri, String data) {
+    public HttpsURLConnection post(String uri, String data) {
+        System.out.println(data);
         try {
             TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
                 public X509Certificate[] getAcceptedIssuers() {
@@ -174,7 +360,8 @@ public class BotController extends TelegramLongPollingBot {
             HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
             HttpsURLConnection conn;
             URL url = new URL(uri);
-            conn = (HttpsURLConnection) url.openConnection();
+
+            conn = (HttpsURLConnection)url.openConnection();
             conn.setHostnameVerifier(allHostsValid);
             conn.setDoOutput(true);
             conn.setConnectTimeout(100000);
@@ -184,26 +371,11 @@ public class BotController extends TelegramLongPollingBot {
 
             conn.getOutputStream().write(out);
 
-            System.out.println(conn.getResponseMessage());
-
-            StringBuilder textBuilder = new StringBuilder();
-
-            InputStream in = conn.getInputStream();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader
-                    (in, StandardCharsets.UTF_8))) {
-                String c;
-                while ((c = reader.readLine()) != null) {
-                    textBuilder.append(c);
-                }
-            }
-
-            System.out.println(textBuilder);
-
             conn.disconnect();
-            return conn.getResponseCode() == 200 || conn.getResponseCode() == 201;
+            return conn;
         } catch (Exception e) {
             System.out.println("error: " + e);
-            return false;
+            return null;
 //            e.printStackTrace();
         }
     }
